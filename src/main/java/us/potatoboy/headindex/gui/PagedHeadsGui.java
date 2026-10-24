@@ -23,6 +23,7 @@ public class PagedHeadsGui extends LayeredGui {
     final SlotBasedGui parent;
     final Layer contentLayer;
     final Layer navigationLayer;
+    private int tradeableHeads = -1;
 
     private static final Style regular = Style.EMPTY.withItalic(false).withColor(ChatFormatting.WHITE);
 
@@ -58,6 +59,21 @@ public class PagedHeadsGui extends LayeredGui {
         );
         updateNavigation();
         this.addLayer(navigationLayer, 0, 5);
+    }
+
+    @Override
+    public void setTitle(Component title) {
+        super.setTitle(GuiTitle.of(getPlayer(), GuiTitle.Layout.LARGE, title));
+    }
+
+    @Override
+    public void onTick() {
+        super.onTick();
+
+        if (HeadIndex.config.economyType == HeadIndexConfig.EconomyType.HEAD && getPlayer().tickCount % 10 == 0
+                && tradeableHeads != HeadIndex.countTradeableHeads(getPlayer())) {
+            updateNavigation();
+        }
     }
 
     private int getMaxPage() {
@@ -96,6 +112,14 @@ public class PagedHeadsGui extends LayeredGui {
         navigationLayer.setSlot(4, new GuiElementBuilder(Items.PAPER)
                 .setName(Component.literal(this.page + 1 + " / " + this.getMaxPage()).setStyle(regular))
         );
+
+        if (HeadIndex.config.economyType == HeadIndexConfig.EconomyType.HEAD) {
+            this.tradeableHeads = HeadIndex.countTradeableHeads(getPlayer());
+            navigationLayer.setSlot(8, new GuiElementBuilder(Items.PLAYER_HEAD)
+                    .setName(Component.translatable("text.headindex.trade.owned", this.tradeableHeads).setStyle(regular))
+                    .addLoreLine(Component.translatable("text.headindex.trade.hint").setStyle(Style.EMPTY.withItalic(false).withColor(ChatFormatting.GRAY)))
+            );
+        }
     }
 
     private void updateContent() {
@@ -121,6 +145,14 @@ public class PagedHeadsGui extends LayeredGui {
     }
 
     private void processHeadClick(Head head, ClickType type) {
+        processHeadPurchase(head, type);
+
+        if (HeadIndex.config.economyType == HeadIndexConfig.EconomyType.HEAD) {
+            updateNavigation();
+        }
+    }
+
+    private void processHeadPurchase(Head head, ClickType type) {
         var player = getPlayer();
 
         ItemStack cursorStack = getPlayer().containerMenu.getCarried();

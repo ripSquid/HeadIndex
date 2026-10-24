@@ -44,7 +44,7 @@ public class HeadGui extends SimpleGui {
             ++index;
         }
 
-        this.setTitle(Component.translatable("text.headindex.title"));
+        this.setTitle(GuiTitle.of(player, GuiTitle.Layout.SMALL, Component.translatable("text.headindex.title")));
 
         if (HIPermissions.COMMAND_SEARCH.test(player.createCommandSourceStack())) {
             this.setSlot(this.getSize() - 1, new GuiElementBuilder()

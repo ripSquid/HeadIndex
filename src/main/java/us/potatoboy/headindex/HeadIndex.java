@@ -1,6 +1,7 @@
 package us.potatoboy.headindex;
 
 import eu.pb4.common.economy.api.CommonEconomy;
+import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
@@ -27,6 +28,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 public class HeadIndex implements ModInitializer {
     public static final String MOD_ID = "headindex";
@@ -41,6 +43,8 @@ public class HeadIndex implements ModInitializer {
         
         config = HeadIndexConfig.loadConfig(new File(FabricLoader.getInstance().getConfigDir() + "/head-index.json"));
         
+        PolymerResourcePackUtils.addModAssets(MOD_ID);
+
         CompletableFuture.runAsync(() -> heads = HEAD_DATABASE.getHeads());
     }
 
@@ -49,28 +53,8 @@ public class HeadIndex implements ModInitializer {
 
         switch (HeadIndex.config.economyType) {
             case FREE -> onPurchase.run();
-            case TAG -> {
-                var stack = new HashSet<ItemVariant>();
-                for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                    ItemStack slotStack = player.getInventory().getItem(i);
-                    if (slotStack.is(HeadIndex.config.getCostTag())) {
-                        stack.add(ItemVariant.of(slotStack));
-                    }
-                }
-                try (Transaction transaction = Transaction.openOuter()) {
-                    long extracted = 0;
-                    for (ItemVariant item : stack) {
-                        extracted += PlayerInventoryStorage.of(player).extract(item, trueAmount - extracted, transaction);
-                        if (extracted >= trueAmount) {
-                            break;
-                        }
-                    }
-                    if (extracted == trueAmount) {
-                        transaction.commit();
-                        onPurchase.run();
-                    }
-                }
-            }
+            case TAG -> extractAndRun(player, trueAmount, stack -> stack.is(HeadIndex.config.getCostTag()), onPurchase);
+            case HEAD -> extractAndRun(player, trueAmount, HeadIndexConfig::isTradeableHead, onPurchase);
             case ITEM -> {
                 try (Transaction transaction = Transaction.openOuter()) {
                     long extracted = PlayerInventoryStorage.of(player).extract(ItemVariant.of(HeadIndex.config.getCostItem()), trueAmount, transaction);
@@ -107,6 +91,41 @@ public class HeadIndex implements ModInitializer {
         }
     }
     
+    /** Counts the heads in the player's inventory that can be traded in when economyType is HEAD */
+    public static int countTradeableHeads(ServerPlayer player) {
+        int count = 0;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack slotStack = player.getInventory().getItem(i);
+            if (HeadIndexConfig.isTradeableHead(slotStack)) {
+                count += slotStack.getCount();
+            }
+        }
+        return count;
+    }
+
+    private static void extractAndRun(ServerPlayer player, int amount, Predicate<ItemStack> matches, Runnable onPurchase) {
+        var variants = new HashSet<ItemVariant>();
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack slotStack = player.getInventory().getItem(i);
+            if (matches.test(slotStack)) {
+                variants.add(ItemVariant.of(slotStack));
+            }
+        }
+        try (Transaction transaction = Transaction.openOuter()) {
+            long extracted = 0;
+            for (ItemVariant item : variants) {
+                extracted += PlayerInventoryStorage.of(player).extract(item, amount - extracted, transaction);
+                if (extracted >= amount) {
+                    break;
+                }
+            }
+            if (extracted == amount) {
+                transaction.commit();
+                onPurchase.run();
+            }
+        }
+    }
+
     public static Component licenseWarn() {
         try {
             return Component.translatable("text.headindex.config.license",  Component.literal("https://minecraft-heads.com/wiki/minecraft-heads/api-v2-for-users").setStyle(

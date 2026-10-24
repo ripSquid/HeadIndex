@@ -1,0 +1,25 @@
+{
+  "providers": [
+    {
+      "type": "space",
+      "advances": {
+        "": -8,
+        "": -169
+      }
+    },
+    {
+      "type": "bitmap",
+      "file": "headindex:gui/menu_9x2.png",
+      "ascent": 13,
+      "height": 150,
+      "chars": [""]
+    },
+    {
+      "type": "bitmap",
+      "file": "headindex:gui/menu_9x6.png",
+      "ascent": 13,
+      "height": 222,
+      "chars": [""]
+    }
+  ]
+}

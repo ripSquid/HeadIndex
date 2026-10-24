@@ -8,8 +8,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.permissions.PermissionLevel;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -27,7 +29,8 @@ public class HeadIndexConfig {
 		ECONOMY,
 		FREE,
 		LEVEL,
-		LEVELPOINTS
+		LEVELPOINTS,
+		HEAD
 	}
     
     private final String _licenseComment = "Enter your license key below. Register here: https://minecraft-heads.com/wiki/minecraft-heads/api-v2-for-users";
@@ -36,13 +39,13 @@ public class HeadIndexConfig {
     private final String _permissionComment = "The default permission level for the commands. Set to 0 to allow all players access";
 	public int permissionLevel = 2;
 
-    private final String _economyComment = "The type of economy to use. Set to FREE to disable economy, ITEM to use an item, TAG to use a tag, ECONOMY to use an economy currency, LEVEL to use minecraft levels, or LEVELPOINTS to use level points";
+    private final String _economyComment = "The type of economy to use. Set to FREE to disable economy, ITEM to use an item, TAG to use a tag, ECONOMY to use an economy currency, LEVEL to use minecraft levels, LEVELPOINTS to use level points, or HEAD to trade in any player or mob head for another head";
 	public EconomyType economyType = EconomyType.FREE;
 
     private final String _costComment = "The identifier for the item, tag or currency to use for the cost, only needed if economyType is set to ITEM, TAG, or ECONOMY";
     public Identifier costType = Identifier.fromNamespaceAndPath("minecraft", "diamond");
 
-    private final String _costAmountComment = "The amount of the item, currency or level to use for the cost";
+    private final String _costAmountComment = "The amount of the item, head, currency or level to use for the cost";
 	public int costAmount = 1;
 
 	/**
@@ -66,6 +69,8 @@ public class HeadIndexConfig {
 			case LEVELPOINTS:
 				// Cost in raw XP points
 				return Component.translatable("text.headindex.xp.points", costAmount);
+			case HEAD:
+				return Component.translatable("text.headindex.trade.cost", costAmount);
 			case FREE:
 			default:
 				return Component.empty();
@@ -87,6 +92,11 @@ public class HeadIndexConfig {
 		return TagKey.create(BuiltInRegistries.ITEM.key(), costType);
 	}
 	
+	/** Any player or mob head can be traded in when economyType is HEAD */
+	public static boolean isTradeableHead(ItemStack stack) {
+		return stack.is(ItemTags.SKULLS);
+	}
+
 	/** Get the configured PermissionLevel */
 	public PermissionLevel getPermissionLevel() {
 		return PermissionLevel.byId(permissionLevel);

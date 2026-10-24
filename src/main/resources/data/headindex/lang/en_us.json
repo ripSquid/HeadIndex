@@ -6,6 +6,10 @@
   "text.headindex.playername": "Playername",
   "text.headindex.price": "Price: %s",
 
+  "text.headindex.trade.cost": "Any head × %s",
+  "text.headindex.trade.owned": "Heads to trade in: %s",
+  "text.headindex.trade.hint": "Picking a head trades in one of your own heads",
+
   "text.headindex.xp.points": "%s XP",
   "text.headindex.xp.levels": "%s XP Levels",
   
