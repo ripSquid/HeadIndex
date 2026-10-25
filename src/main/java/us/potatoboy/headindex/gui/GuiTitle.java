@@ -20,15 +20,17 @@ public final class GuiTitle {
             .withColor(0xFFFFFF)
             .withItalic(false);
 
-    private static final String SHIFT_TO_EDGE = "";
-    private static final String SHIFT_TO_TITLE = "";
+    private static final String SHIFT_TO_EDGE = "\ue100";
+    private static final String SHIFT_TO_TITLE = "\ue101";
 
     private GuiTitle() {
     }
 
     public enum Layout {
-        SMALL(""),
-        LARGE("");
+        SMALL("\ue000"),
+        LARGE("\ue001"),
+        /** Like LARGE, with a marked trade-in slot at the end of the bottom row */
+        LARGE_TRADE("\ue002");
 
         private final String glyph;
 

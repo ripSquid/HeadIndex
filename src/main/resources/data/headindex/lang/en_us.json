@@ -7,8 +7,9 @@
   "text.headindex.price": "Price: %s",
 
   "text.headindex.trade.cost": "Any head × %s",
-  "text.headindex.trade.owned": "Heads to trade in: %s",
-  "text.headindex.trade.hint": "Picking a head trades in one of your own heads",
+  "text.headindex.trade.status": "Trade-in: %s (%s per head)",
+  "text.headindex.trade.hint": "Put heads in the trade-in slot at the bottom right",
+  "text.headindex.trade.missing": "Put %s head(s) in the trade-in slot first",
 
   "text.headindex.xp.points": "%s XP",
   "text.headindex.xp.levels": "%s XP Levels",

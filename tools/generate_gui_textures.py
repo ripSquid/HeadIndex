@@ -10,6 +10,8 @@ texture has to line up with the vanilla container layout:
   * every slot is cut out (fully transparent) because the title is rendered *above* the items. The vanilla
     slot background shows through the cutout.
 
+The trade variant adds a "TRADE IN" label and a gold frame for the trade-in slot at the end of the bottom row.
+
 Usage: python3 -I tools/generate_gui_textures.py
 """
 from pathlib import Path
@@ -28,6 +30,8 @@ SLOT_DARK = (75, 84, 104, 255)
 SLOT_LIGHT = (244, 246, 251, 255)
 NAV_DARK = (44, 56, 89, 255)
 NAV_LIGHT = (143, 177, 247, 255)
+TRADE_DARK = (150, 105, 0, 255)
+TRADE_LIGHT = (255, 216, 90, 255)
 
 OUT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/headindex/textures/gui"
 
@@ -50,7 +54,53 @@ def slot(img, x, y, dark=SLOT_DARK, light=SLOT_LIGHT):
     rect(img, x, y, x + 15, y + 15, (0, 0, 0, 0))
 
 
-def panel(rows, nav_row=None):
+# 3x5 pixel font for the label on the trade-in variant
+FONT = {
+    "T": ("111", "010", "010", "010", "010"),
+    "R": ("110", "101", "110", "101", "101"),
+    "A": ("010", "101", "111", "101", "101"),
+    "D": ("110", "101", "101", "101", "110"),
+    "E": ("111", "100", "110", "100", "111"),
+    "I": ("111", "010", "010", "010", "111"),
+    "N": ("1001", "1101", "1011", "1001", "1001"),
+    " ": ("00", "00", "00", "00", "00"),
+}
+
+
+def text_width(text):
+    return sum(len(FONT[c][0]) for c in text) + len(text) - 1
+
+
+def draw_text(img, x, y, text, color):
+    for char in text:
+        glyph = FONT[char]
+        for row, bits in enumerate(glyph):
+            for col, bit in enumerate(bits):
+                if bit == "1":
+                    img.putpixel((x + col, y + row), color)
+        x += len(glyph[0]) + 1
+
+
+def trade_label(img, first_col, row):
+    """Opaque plate over two slot cells: a "TRADE IN" label with an arrow that points at the next slot."""
+    left = 7 + 18 * first_col
+    top = 17 + 18 * row
+    right = left + 35
+    bottom = top + 17
+
+    rect(img, left, top, right, bottom, TRADE_DARK)
+    rect(img, left + 1, top + 1, right - 1, bottom - 1, HEADER)
+
+    label = "TRADE IN"
+    draw_text(img, left + (36 - text_width(label)) // 2, top + 3, label, TRADE_LIGHT)
+
+    shaft_y = top + 12
+    rect(img, left + 4, shaft_y, right - 6, shaft_y, TRADE_LIGHT)
+    for offset in range(3):
+        rect(img, right - 7 + offset, shaft_y - 2 + offset, right - 7 + offset, shaft_y + 2 - offset, TRADE_LIGHT)
+
+
+def panel(rows, nav_row=None, trade=False):
     height = 114 + rows * 18
     img = Image.new("RGBA", (WIDTH, height), (0, 0, 0, 0))
 
@@ -76,6 +126,10 @@ def panel(rows, nav_row=None):
             else:
                 slot(img, 8 + 18 * col, 18 + 18 * row)
 
+    if trade:
+        trade_label(img, 6, nav_row)
+        slot(img, 8 + 18 * 8, 18 + 18 * nav_row, TRADE_DARK, TRADE_LIGHT)
+
     inventory_y = 103 + (rows - 4) * 18
     for row in range(3):
         for col in range(9):
@@ -90,6 +144,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     panel(2).save(OUT / "menu_9x2.png", optimize=True)
     panel(6, nav_row=5).save(OUT / "menu_9x6.png", optimize=True)
+    panel(6, nav_row=5, trade=True).save(OUT / "menu_9x6_trade.png", optimize=True)
 
 
 if __name__ == "__main__":

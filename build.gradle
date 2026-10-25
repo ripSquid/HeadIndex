@@ -30,6 +30,10 @@ dependencies {
     implementation include("eu.pb4:polymer-resource-pack:${project.polymer_version}")
 }
 
+java {
+    withSourcesJar()
+}
+
 processResources {
     inputs.property "version", project.version
 

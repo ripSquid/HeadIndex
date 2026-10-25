@@ -40,7 +40,7 @@ public class HeadIndexConfig {
 	public int permissionLevel = 2;
 
     private final String _economyComment = "The type of economy to use. Set to FREE to disable economy, ITEM to use an item, TAG to use a tag, ECONOMY to use an economy currency, LEVEL to use minecraft levels, LEVELPOINTS to use level points, or HEAD to trade in any player or mob head for another head";
-	public EconomyType economyType = EconomyType.FREE;
+	public EconomyType economyType = EconomyType.HEAD;
 
     private final String _costComment = "The identifier for the item, tag or currency to use for the cost, only needed if economyType is set to ITEM, TAG, or ECONOMY";
     public Identifier costType = Identifier.fromNamespaceAndPath("minecraft", "diamond");

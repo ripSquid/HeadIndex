@@ -13,7 +13,11 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Prediction;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -23,7 +27,12 @@ public class PagedHeadsGui extends LayeredGui {
     final SlotBasedGui parent;
     final Layer contentLayer;
     final Layer navigationLayer;
-    private int tradeableHeads = -1;
+    private static final int TRADE_SLOT = 8;
+    private static final int TRADE_STATUS_SLOT = 2;
+
+    private final boolean tradeMode = HeadIndex.config.economyType == HeadIndexConfig.EconomyType.HEAD;
+    private final SimpleContainer tradeIn = new SimpleContainer(1);
+    private int shownTradeHeads = -1;
 
     private static final Style regular = Style.EMPTY.withItalic(false).withColor(ChatFormatting.WHITE);
 
@@ -57,23 +66,75 @@ public class PagedHeadsGui extends LayeredGui {
                 .setName(Component.translatable("text.headindex.back"))
                 .setCallback((index, type, action, gui) -> parent.open())
         );
+        if (tradeMode) {
+            navigation.setSlot(TRADE_SLOT, new Slot(tradeIn, 0, 0, 0) {
+                @Override
+                public boolean mayPlace(ItemStack stack) {
+                    return HeadIndexConfig.isTradeableHead(stack);
+                }
+            });
+        }
         updateNavigation();
         this.addLayer(navigationLayer, 0, 5);
     }
 
     @Override
     public void setTitle(Component title) {
-        super.setTitle(GuiTitle.of(getPlayer(), GuiTitle.Layout.LARGE, title));
+        var layout = tradeMode ? GuiTitle.Layout.LARGE_TRADE : GuiTitle.Layout.LARGE;
+        super.setTitle(GuiTitle.of(getPlayer(), layout, title));
     }
 
     @Override
     public void onTick() {
         super.onTick();
 
-        if (HeadIndex.config.economyType == HeadIndexConfig.EconomyType.HEAD && getPlayer().tickCount % 10 == 0
-                && tradeableHeads != HeadIndex.countTradeableHeads(getPlayer())) {
-            updateNavigation();
+        if (tradeMode && shownTradeHeads != tradeIn.getItem(0).getCount()) {
+            updateTradeStatus();
         }
+    }
+
+    @Override
+    public void onRemoved() {
+        super.onRemoved();
+        returnTradeIn();
+    }
+
+    /** Gives back whatever is left in the trade-in slot. Can run more than once, so it empties the slot first. */
+    private void returnTradeIn() {
+        var stack = tradeIn.removeItemNoUpdate(0);
+        if (!stack.isEmpty()) {
+            getPlayer().getInventory().placeItemBackInInventory(stack, Prediction.SERVER_ONLY);
+        }
+    }
+
+    private void updateTradeStatus() {
+        var traded = tradeIn.getItem(0).getCount();
+        this.shownTradeHeads = traded;
+
+        navigationLayer.setSlot(TRADE_STATUS_SLOT, new GuiElementBuilder(Items.PLAYER_HEAD)
+                .setName(Component.translatable("text.headindex.trade.status", traded, HeadIndex.config.costAmount).setStyle(regular))
+                .addLoreLine(Component.translatable("text.headindex.trade.hint").setStyle(Style.EMPTY.withItalic(false).withColor(ChatFormatting.GRAY)))
+        );
+    }
+
+    /** Pays for a purchase. With head trade-in the heads come out of the trade-in slot instead of the inventory. */
+    private void purchase(int amount, Runnable onPurchase) {
+        if (!tradeMode) {
+            HeadIndex.tryPurchase(getPlayer(), amount, onPurchase);
+            return;
+        }
+
+        var needed = amount * HeadIndex.config.costAmount;
+        var offered = tradeIn.getItem(0);
+        if (offered.getCount() < needed) {
+            getPlayer().sendSystemMessage(Component.translatable("text.headindex.trade.missing", needed).withStyle(ChatFormatting.RED));
+            getPlayer().playSound(SoundEvents.VILLAGER_NO, 1f, 1f);
+            return;
+        }
+
+        offered.shrink(needed);
+        tradeIn.setChanged();
+        onPurchase.run();
     }
 
     private int getMaxPage() {
@@ -113,12 +174,8 @@ public class PagedHeadsGui extends LayeredGui {
                 .setName(Component.literal(this.page + 1 + " / " + this.getMaxPage()).setStyle(regular))
         );
 
-        if (HeadIndex.config.economyType == HeadIndexConfig.EconomyType.HEAD) {
-            this.tradeableHeads = HeadIndex.countTradeableHeads(getPlayer());
-            navigationLayer.setSlot(8, new GuiElementBuilder(Items.PLAYER_HEAD)
-                    .setName(Component.translatable("text.headindex.trade.owned", this.tradeableHeads).setStyle(regular))
-                    .addLoreLine(Component.translatable("text.headindex.trade.hint").setStyle(Style.EMPTY.withItalic(false).withColor(ChatFormatting.GRAY)))
-            );
+        if (tradeMode) {
+            updateTradeStatus();
         }
     }
 
@@ -146,10 +203,6 @@ public class PagedHeadsGui extends LayeredGui {
 
     private void processHeadClick(Head head, ClickType type) {
         processHeadPurchase(head, type);
-
-        if (HeadIndex.config.economyType == HeadIndexConfig.EconomyType.HEAD) {
-            updateNavigation();
-        }
     }
 
     private void processHeadPurchase(Head head, ClickType type) {
@@ -160,25 +213,25 @@ public class PagedHeadsGui extends LayeredGui {
 
         if (cursorStack.isEmpty()) {
             if (type.shift) {
-                HeadIndex.tryPurchase(player, 1, () -> player.getInventory().add(headStack));
+                purchase(1, () -> player.getInventory().add(headStack));
             } else if (type.isMiddle) {
-				HeadIndex.tryPurchase(player, headStack.getMaxStackSize(), () -> {
+				purchase(headStack.getMaxStackSize(), () -> {
 					headStack.setCount(headStack.getMaxStackSize());
 					player.containerMenu.setCarried(headStack);
 				});
             } else {
-				HeadIndex.tryPurchase(player, 1, () -> player.containerMenu.setCarried(headStack));
+				purchase(1, () -> player.containerMenu.setCarried(headStack));
             }
         } else if (cursorStack.getMaxStackSize() <= cursorStack.getCount()) {
 			return;
 		} else if (ItemStack.isSameItem(headStack, cursorStack)) {
             if (type.isLeft) {
-				HeadIndex.tryPurchase(player, 1, () -> cursorStack.grow(1));
+				purchase(1, () -> cursorStack.grow(1));
             } else if (type.isRight) {
 				if (HeadIndex.config.economyType == HeadIndexConfig.EconomyType.FREE) cursorStack.shrink(1);
             } else if (type.isMiddle) {
 				var amount = headStack.getMaxStackSize() - cursorStack.getCount();
-				HeadIndex.tryPurchase(player, amount, () -> {
+				purchase(amount, () -> {
 					headStack.setCount(headStack.getMaxStackSize());
 					player.containerMenu.setCarried(headStack);
 				});

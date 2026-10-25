@@ -91,18 +91,6 @@ public class HeadIndex implements ModInitializer {
         }
     }
     
-    /** Counts the heads in the player's inventory that can be traded in when economyType is HEAD */
-    public static int countTradeableHeads(ServerPlayer player) {
-        int count = 0;
-        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            ItemStack slotStack = player.getInventory().getItem(i);
-            if (HeadIndexConfig.isTradeableHead(slotStack)) {
-                count += slotStack.getCount();
-            }
-        }
-        return count;
-    }
-
     private static void extractAndRun(ServerPlayer player, int amount, Predicate<ItemStack> matches, Runnable onPurchase) {
         var variants = new HashSet<ItemVariant>();
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {

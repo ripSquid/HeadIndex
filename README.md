@@ -29,7 +29,7 @@ To use the mod, you must enter a free [license key](https://minecraft-heads.com/
   "_permissionComment": "The default permission level for the commands. Set to 0 to allow all players access",
   "permissionLevel": 2,
   "_economyComment": "The type of economy to use. Set to FREE to disable economy, ITEM to use an item, TAG to use a tag, ECONOMY to use an economy currency, LEVEL to use minecraft levels, LEVELPOINTS to use level points, or HEAD to trade in any player or mob head for another head",
-  "economyType": "FREE",
+  "economyType": "HEAD",
   "_costComment": "The identifier for the item, tag or currency to use for the cost, only needed if economyType is set to ITEM, TAG, or ECONOMY",
   "costType": "minecraft:diamond",
   "_costAmountComment": "The amount of the item, head, currency or level to use for the cost",
@@ -38,9 +38,11 @@ To use the mod, you must enter a free [license key](https://minecraft-heads.com/
 ```
 
 ### Head trade-in
-With `"economyType": "HEAD"` players pay for a head with another head instead of an item or currency. Any head from the `minecraft:skulls` tag
-(player heads, including database heads, and the zombie, skeleton, wither skeleton, creeper, piglin and dragon heads) in the player's inventory is accepted.
-The head menu shows how many heads the player can trade in, and `costAmount` sets how many heads each head costs (`1` is a 1:1 trade).
+`HEAD` is the default. With `"economyType": "HEAD"` players pay for a head with another head instead of an item or currency. Any head from the `minecraft:skulls` tag
+(player heads, including database heads, and the zombie, skeleton, wither skeleton, creeper, piglin and dragon heads) is accepted.
+The head menu has a marked trade-in slot in the bottom right corner. Players put heads in it, and picking a head takes `costAmount` heads
+(`1` is a 1:1 trade) out of that slot. Heads left in the slot are returned when the menu closes.
+The player name lookup in the main menu has no trade-in slot, so it takes the heads from the player's inventory instead.
 
 ### Resource pack
 Head Index adds its menu textures to the Polymer resource pack. You need to host and send the pack to players, for example with
